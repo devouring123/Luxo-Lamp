@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+        <title>Project #1 - Luxo Lamp</title>
+        <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+        }
+        #webgl {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        </style>
+    </head>
+    <body>
+        <canvas id="webgl"></canvas>
+    </body>
+<script type="module">
+import * as THREE from '../resources/three.js/build/three.module.js';
+import {OrbitControls} from '../resources/three.js/examples/jsm/controls/OrbitControls.js';
+import {GUI} from '../3rdparty/dat.gui.module.js';
+
+function main() {
+    const canvas = document.querySelector('#webgl');
+    const renderer = new THREE.WebGLRenderer({canvas});
+    renderer.shadowMap.enabled = true;
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('black');
+
+    // room
+    const room = {width:30, height:20};
+    {
+        const cubeGeo = new THREE.BoxBufferGeometry(room.width, room.height, room.width);
+        const cubeMat = new THREE.MeshPhongMaterial({color: '#8AC'});
+        cubeMat.side = THREE.BackSide;
+        const mesh = new THREE.Mesh(cubeGeo, cubeMat);
+        mesh.position.set(0, room.height / 2, 0);
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+    }
+    // define the luxo lamp
+
+    // base
+    const base = new THREE.Object3D();
+    {
+        scene.add(base);
+    }
+    
+    // baseMesh 
+    const baseMesh = {width:4, height:1, color:'red'};
+    {
+        baseMesh.mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(1, 1, 1),
+                                    new THREE.MeshPhongMaterial({color: baseMesh.color}));
+        base.add(baseMesh.mesh);
+    }
+    
+    // baseDisc
+    const baseDisc = new THREE.Object3D();
+    {
+        baseDisc.angle = 20;
+        base.add(baseDisc);
+    }
+    
+    // baseDiscMesh
+    const baseDiscMesh = {radius: 1, height: 0.2, color:'orange', segs:8};
+    {
+        baseDiscMesh.mesh = new THREE.Mesh( 
+                                new THREE.CylinderBufferGeometry(baseDiscMesh.radius, 
+                                    baseDiscMesh.radius, baseDiscMesh.height, baseDiscMesh.segs),
+                                new THREE.MeshPhongMaterial({color: baseDiscMesh.color}));
+        baseDisc.add(baseDiscMesh.mesh);
+    }
+
+    // jointBase
+    const jointBase = new THREE.Object3D();
+    {
+        jointBase.angle = -30;
+        baseDisc.add(jointBase);
+    }
+
+    // armLower
+    const armLower = new THREE.Object3D();
+    {
+        jointBase.add(armLower);
+    }
+    
+    // jointMiddle
+    const jointMiddle = new THREE.Object3D();
+    {
+        jointMiddle.angle = 60
+        armLower.add(jointMiddle);
+    }
+
+    // armUpper
+    const armUpper = new THREE.Object3D();
+    {
+        jointMiddle.add(armUpper);
+    }
+
+    // jointHead
+    const jointHead = new THREE.Object3D();
+    {
+        jointHead.angle = 30;
+        armUpper.add(jointHead); 
+    }
+
+    // head
+    const head = new THREE.Object3D();
+    {
+        jointHead.add(head);
+    }
+
+    // headBulb
+    const headBulb = new THREE.Object3D();
+    {
+        head.add(headBulb);
+    }
+
+    // jointBaseMesh
+    const jointBaseMesh = {radius: 0.5, height: 1, color:'green', segs:4};
+    {
+        jointBaseMesh.mesh = new THREE.Mesh( 
+                                new THREE.CylinderBufferGeometry(jointBaseMesh.radius, 
+                                jointBaseMesh.radius, jointBaseMesh.height, jointBaseMesh.segs),
+                                new THREE.MeshPhongMaterial({color: jointBaseMesh.color}));
+        jointBaseMesh.mesh.rotation.z = Math.PI / 2;
+        jointBase.add(jointBaseMesh.mesh);
+    }
+
+    // jointMiddleMesh
+    const jointMiddleMesh = {radius: 0.5, height: 1, color:'green', segs:4};
+    {
+        jointMiddleMesh.mesh = new THREE.Mesh( 
+                                new THREE.CylinderBufferGeometry(jointMiddleMesh.radius, 
+                                jointMiddleMesh.radius, jointMiddleMesh.height, jointMiddleMesh.segs),
+                                new THREE.MeshPhongMaterial({color: jointMiddleMesh.color}));
+        jointMiddleMesh.mesh.rotation.z = Math.PI / 2;
+        jointMiddle.add(jointMiddleMesh.mesh);
+    }
+
+    // jointHeadMesh
+    const jointHeadMesh = {radius: 0.5, height: 1, color:'green', segs:4};
+    {
+        jointHeadMesh.mesh = new THREE.Mesh( 
+                                new THREE.CylinderBufferGeometry(jointHeadMesh.radius, 
+                                jointHeadMesh.radius, jointHeadMesh.height, jointHeadMesh.segs),
+                                new THREE.MeshPhongMaterial({color: jointHeadMesh.color}));
+        jointHeadMesh.mesh.rotation.z = Math.PI / 2;
+        jointHead.add(jointHeadMesh.mesh);
+    }
+
+
+    // armLowerMesh 
+    const armLowerMesh = {radius: 0.3, height: 6, color:'blue', segs:5};
+    {
+        armLowerMesh.mesh = new THREE.Mesh( 
+                                new THREE.CylinderBufferGeometry(1, 1, 1, armLowerMesh.segs),
+                                new THREE.MeshPhongMaterial({color: armLowerMesh.color}));
+        armLower.add(armLowerMesh.mesh);
+    }
+
+    // 구
+    {
+        const sphereRadius = 3;
+        const sphereWidthDivisions = 32;
+        const sphereHeightDivisions = 16;
+        const sphereGeo = new THREE.SphereGeometry(sphereRadius, sphereWidthDivisions, sphereHeightDivisions);
+        const sphereMat = new THREE.MeshPhongMaterial({color: 'green'});
+        const mesh = new THREE.Mesh(sphereGeo, sphereMat);
+        mesh.position.set(6, 5, 9);
+
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        scene.add(mesh);
+    }
+
+    // 보라색 사면체
+    {
+        const radius = 2;
+        const detail = 2;
+        const tetrahedronGeo = new THREE.TetrahedronGeometry(radius,detail);
+        const tetrahedronMat = new THREE.MeshPhongMaterial({color: 'purple'});
+        const mesh = new THREE.Mesh(tetrahedronGeo, tetrahedronMat);
+        mesh.position.set(-9, 3, 9);
+
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        scene.add(mesh);
+    }
+
+    //tube 형태 토러스
+    {
+        const radius =  4;  
+        const tubeRadius = 1;  
+        const radialSegments = 8;  
+        const tubularSegments = 24;  
+        const tubeGeo = new THREE.TorusGeometry(radius, tubeRadius, radialSegments, tubularSegments);
+        const tubeMat = new THREE.MeshPhongMaterial({color: 'pink'});
+
+        const mesh = new THREE.Mesh(tubeGeo, tubeMat);
+        mesh.position.set(-6, 5, -9)
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        scene.add(mesh);
+    }
+
+    //knotedTorus
+    {
+        const radius =  3;  
+        const tubeRadius =  1;  
+        const radialSegments = 30;  
+        const tubularSegments = 100;  
+        const p =  2;  
+        const q =  3;  
+        const knotGeo = new THREE.TorusKnotGeometry(radius, tubeRadius, tubularSegments, radialSegments, p, q);
+        const knotMat = new THREE.MeshPhongMaterial({color: 'red'});
+
+        const mesh = new THREE.Mesh(knotGeo, knotMat);
+        mesh.position.set(6, 9, -9)
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        scene.add(mesh);
+    }
+
+    // armUpperMesh 
+    const armUpperMesh = {radius: 0.3, height: 5, color:'blue', segs:5};
+    {
+        armUpperMesh.mesh = new THREE.Mesh( 
+                                new THREE.CylinderBufferGeometry(1, 1, 1, armUpperMesh.segs),
+                                new THREE.MeshPhongMaterial({color: armUpperMesh.color}));
+        armUpper.add(armUpperMesh.mesh);
+    }
+
+    // headMesh
+    const headMesh = {radius: 2, height: 2, color:'gray', segs:50};
+    {
+        headMesh.mesh = new THREE.Mesh(
+                        new THREE.ConeBufferGeometry(headMesh.radius, headMesh.height, headMesh.segs),
+                        new THREE.MeshPhongMaterial({color: headMesh.color}));
+
+        head.add(headMesh.mesh);
+    }
+
+    //headBulbMesh
+    const headBulbMesh = {radius: 1, color:'white', segs:30};
+    {
+        headBulbMesh.mesh = new THREE.Mesh(
+                        new THREE.SphereBufferGeometry(headBulbMesh.radius, headBulbMesh.height, headBulbMesh.segs),
+                        new THREE.MeshPhongMaterial({color: headBulbMesh.color}));
+        headBulb.add(headBulbMesh.mesh);
+    }
+
+    const HeadMesh = {}
+
+    function updateLuxo() {
+        base.position.y = baseMesh.height/2;
+        baseMesh.mesh.scale.set(baseMesh.width, baseMesh.height, baseMesh.width);
+
+        baseDisc.position.y = baseMesh.height/2;
+        baseDisc.rotation.y = THREE.MathUtils.degToRad(baseDisc.angle);
+        baseDiscMesh.mesh.position.y = baseDiscMesh.height/2;
+
+        jointBase.position.y = baseDiscMesh.height/2;
+        jointBase.rotation.x = THREE.MathUtils.degToRad(jointBase.angle);
+
+        armLower.position.y = armLowerMesh.height/2;
+        armLowerMesh.mesh.scale.set(armLowerMesh.radius, armLowerMesh.height, armLowerMesh.radius);
+
+        jointMiddle.position.y = armLowerMesh.height / 2;
+        jointMiddle.rotation.x = THREE.MathUtils.degToRad(jointMiddle.angle);
+
+        armUpper.position.y = armUpperMesh.height/2;
+        armUpperMesh.mesh.scale.set(armUpperMesh.radius, armUpperMesh.height, armUpperMesh.radius);
+
+        jointHead.position.y = armUpperMesh.height / 2;
+        jointHead.rotation.x = THREE.MathUtils.degToRad(jointHead.angle - 90);
+
+        head.position.y = -headMesh.height/2;
+        headBulb.position.y = -headMesh.height/2;
+    }
+
+    const lampLight = new THREE.SpotLight(0xffffff);
+    {
+        lampLight.position.set(0,0,0);
+        lampLight.castShadow = true;
+        lampLight.target.position.set(0,-1,0);
+        lampLight.angle = THREE.MathUtils.degToRad(30);
+        headBulb.add(lampLight);
+        headBulb.add(lampLight.target);
+    }
+
+    const lampLightHelper = new THREE.SpotLightHelper(lampLight);
+    scene.add(lampLightHelper);
+
+    const setting = { visibleHelper : false };
+    let aa = true;
+    function updateLight() {
+      lampLight.target.updateMatrixWorld();
+      lampLightHelper.update();
+      lampLightHelper.visible = setting.visibleHelper;
+    }
+
+    updateLight();
+    updateLuxo();
+
+    class DegRadHelper {
+        constructor(obj, prop) {
+        this.obj = obj;
+        this.prop = prop;
+        }
+        get value() {
+        return THREE.MathUtils.radToDeg(this.obj[this.prop]);
+        }
+        set value(v) {
+        this.obj[this.prop] = THREE.MathUtils.degToRad(v);
+        }
+    }
+
+    {
+        const gui = new GUI();
+        let folder;
+        folder = gui.addFolder('base (red box)');
+        folder.add(base.position, 'x', -room.width/2, room.width/2, 1).name('x').onChange(updateLuxo);
+        folder.add(base.position, 'z', -room.width/2, room.width/2, 1).name('z').onChange(updateLuxo);
+        folder.add(baseMesh, 'height', 0.1, 2, 0.1).name('height').onChange(updateLuxo);
+        folder.open();
+
+        let folder2;
+        folder2 = gui.addFolder('arm (blue) lengths');
+        folder2.add(armLowerMesh, 'height', 2, 7, 0.1).name('lower').onChange(updateLuxo);
+        folder2.add(armUpperMesh, 'height', 2, 7, 0.1).name('upper').onChange(updateLuxo);
+        folder2.open();
+
+        gui.add(baseDisc, 'angle', 0, 360, 1).name('angle (yellow)').onChange(updateLuxo);
+
+        let folder3;
+        folder3 = gui.addFolder('joint (green) angles');
+        folder3.add(jointBase, 'angle', -180, 180, 1).name('base').onChange(updateLuxo);
+        folder3.add(jointMiddle, 'angle', -180, 180, 1).name('middle').onChange(updateLuxo);
+        folder3.add(jointHead, 'angle', -180, 180, 1).name('head').onChange(updateLuxo);
+        folder3.open();
+
+        let folder4;
+        folder4 = gui.addFolder('Light Bulb');
+        folder4.add(new DegRadHelper(lampLight, 'angle'), 'value', 10, 90).name('angle').onChange(updateLight);
+        folder4.add(setting, 'visibleHelper').name('show helper').onChange(updateLight);
+        folder4.open();
+
+    }
+
+
+    {   // point light
+        const color = 0xFFFFFF;
+        const intensity = 0.5;
+        const light = new THREE.PointLight(color, intensity);
+        light.position.set(0, room.height, 0);
+        scene.add(light);
+        light.castShadow = true;
+        const helper = new THREE.PointLightHelper(light);
+        scene.add(helper);
+    }
+    
+
+    {   // an ambient light
+        const light = new THREE.AmbientLight('white', 0.3);
+        scene.add(light);
+    }
+
+
+
+    const fov = 45;
+    const aspect = 2;  // the canvas default
+    const near = 0.1;
+    const far = 100;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.set(0, room.height*0.5, room.width*1.4);
+    
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, room.height*0.5, 0);
+    controls.update();
+ 
+    function resizeRendererToDisplaySize(renderer) {
+        const canvas = renderer.domElement;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        const needResize = canvas.width !== width || canvas.height !== height;
+        if (needResize) {
+          renderer.setSize(width, height, false);
+        }
+        return needResize;
+    }
+    
+    function render() {
+    
+        if (resizeRendererToDisplaySize(renderer)) {
+          const canvas = renderer.domElement;
+          camera.aspect = canvas.clientWidth / canvas.clientHeight;
+          camera.updateProjectionMatrix();
+        }
+        
+        renderer.render(scene, camera);
+        
+        requestAnimationFrame(render);
+    }
+    
+
+    requestAnimationFrame(render);
+}
+
+main();
+</script>
+</html>
+
